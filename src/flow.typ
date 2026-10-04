@@ -24,6 +24,8 @@
 ///
 /// It is a `context` function, and it inspects the current page geometry and position itself.
 ///
+/// The function cannot be nested, and `state` updates inside `content` are not supported: `content` is laid out repeatedly while the amount that fits is determined, so any state written inside it would be applied more than once. Counters that Typst resolves after layout (including manual `counter(...).update(...)` / `.step()`) are unaffected.
+///
 /// == Example
 /// ```typ
 /// #import "@preview/riffle:0.2.0": margin-reflow
@@ -32,7 +34,7 @@
 ///
 /// #margin-reflow(
 ///   columns: (count: 2, gutter: 14pt),
-///   footnote-entry: (indent: 0em, size: 9pt),
+///   footnote-style: (size: 9pt),
 /// )[
 ///   #lorem(20)#footnote[some footnote]
 ///
@@ -60,13 +62,13 @@
   /// -> auto | length | dictionary | "symmetric"
   margin: auto,
   /// Styling for the manually laid-out footnote entries.
-  /// - `none` (default): use Typst's defaults.
-  /// - dictionary: used as `footnote.entry` configuration (keys such as `indent`, `size`, `leading`, `clearance`, `gap`, `separator`, `style`).
-  /// - function: shorthand for `(style: function)`.
+  /// - `none` (default): use inherited defaults.
+  /// - `dictionary`: used as `show footnote.entry: set text(...)` configuration (keys such as `size`, `fill`, `size`, `leading`, and of `text`'s arguments).
+  /// - `function`: directly applied to the footnote body.
   ///
-  /// Example: `(indent: 0em, size: 9pt)`.
+  /// Example: `(size: 9pt)`.
   /// -> none | dictionary | function
-  footnote-entry: none,
+  footnote-style: none,
   /// Whether to set the page margin staring from the second page (or the first one if it is on the start of a page) or not.
   /// - `true` (default): use scpoced `set page(...)`, resulting in trailing pagebreak while simplifies the reflow by far.
   /// - `false`: use no `set page(...)` and reflow *every* page. May be slow in first compilation.
@@ -77,24 +79,31 @@
 ) = context {
   // check use condition
   assert(type(page.height) == length and type(page.width) == length, message: "page dimension cannot be auto")
-  if "inside" in page.margin {
-    assert("outside" in page.margin, message: "page margin should have both inside & outside or none")
-  } else if "left" in page.margin {
-    assert("right" in page.margin, message: "page margin should have both left & right or none")
+  if type(page.margin) == dictionary {
+    if "inside" in page.margin {
+      assert("outside" in page.margin, message: "page margin should have both inside & outside or none")
+    } else if "left" in page.margin {
+      assert("right" in page.margin, message: "page margin should have both left & right or none")
+    }
   }
 
   // check arguments
   assert(type(columns) == dictionary, message: "columns should be a dictionary")
   let column-params = columns
   if "count" not in column-params { column-params.insert("count", 1) }
-  let fn-entry = if footnote-entry == none {
-    (:)
-  } else if type(footnote-entry) == dictionary {
-    footnote-entry
-  } else if type(footnote-entry) == function {
-    (style: footnote-entry)
+  assert(column-params.count == 1 or set-page-margin, message: "cannot use set-page-margin == false when # columns > 1")
+  let fn-entry = (
+    gap: footnote.entry.gap,
+    indent: footnote.entry.indent,
+    clearance: footnote.entry.clearance,
+    separator: footnote.entry.separator,
+  )
+  if footnote-style == none {
+    fn-entry += (style: (:))
+  } else if type(footnote-style) == dictionary or type(footnote-style) == function {
+    fn-entry += (style: footnote-style)
   } else {
-    panic("footnote-entry is of unexptected type")
+    panic("footnote-style is of unexptected type")
   }
 
   // get page dim
@@ -166,7 +175,14 @@
     // remove first line indent if necessary and return
     let (amt, all) = _get-fli()
     if (
-      consumed > 0 and units-ori.len() > consumed and not _ends-block(units-ori.at(consumed - 1)) and all and amt != 0pt
+      not set-page-margin
+        and (
+          consumed > 0
+            and units-ori.len() > consumed
+            and not _ends-block(units-ori.at(consumed - 1))
+            and all
+            and amt != 0pt
+        )
     ) {
       units-ori = (h(-amt),) + units-ori.slice(consumed)
     } else {
@@ -201,7 +217,7 @@
   }
   let (page-main, page-footer) = _get-page-parts(page-body)
   let page-y = measure(page-main, width: width).height + measure(page-footer, width: width).height
-  while page-y >= page-avail - text.size {
+  while page-y >= page-avail - (1em + par.leading).to-absolute() {
     page-body // print current page
     page-num += 1 // increase page number
     footnote-base += footnote-included
@@ -212,7 +228,6 @@
   }
 
   // reflow last page
-  // TODO: use figure(placement: bottom) for the last footnotes if necessary?
   let (last-main, last-footer) = _get-page-parts(page-body)
   let last-page-setting = page-body.fields()
   let _ = last-page-setting.remove("body")

@@ -25,18 +25,19 @@
 }
 
 #let _calc-content-dims(margin) = {
+  let page-margin = if type(page.margin) == dictionary { page.margin } else { (x: page.margin, y: page.margin) }
   let dims = (width: page.width, height: page.height)
-  let current-x = if "inside" in page.margin {
-    (inside: page.margin.inside, outside: page.margin.outside)
-  } else if "left" in page.margin {
-    (left: page.margin.left, right: page.margin.right)
+  let current-x = if "inside" in page-margin {
+    (inside: page-margin.inside, outside: page-margin.outside)
+  } else if "left" in page-margin {
+    (left: page-margin.left, right: page-margin.right)
   } else {
-    (left: page.margin.x, right: page.margin.x)
+    (left: page-margin.x, right: page-margin.x)
   }
   let auto-margin = (2.5 / 21) * calc.min(dims.width, dims.height)
   let current-y = (
-    top: if "top" in page.margin { page.margin.top } else if "y" in page.margin { page.margin.y } else { auto-margin },
-    bottom: if "bottom" in page.margin { page.margin.bottom } else if "y" in page.margin { page.margin.y } else {
+    top: if "top" in page-margin { page-margin.top } else if "y" in page-margin { page-margin.y } else { auto-margin },
+    bottom: if "bottom" in page-margin { page-margin.bottom } else if "y" in page-margin { page-margin.y } else {
       auto-margin
     },
   )
@@ -51,7 +52,7 @@
   } else if margin == "symmetric" {
     (top: current-y.top, bottom: current-y.bottom, x: calc.min(..current-x.values()))
   } else if margin == auto {
-    page.margin
+    page-margin
   } else {
     panic("margin is of unexptected type")
   }

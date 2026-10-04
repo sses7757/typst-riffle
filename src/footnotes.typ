@@ -142,7 +142,7 @@
 }
 
 // Render a footnote area. `entry` accepts the same keys as `footnote.entry`
-// (`clearance`, `gap`, `separator`, `indent`, `size`, `leading`, `style`).
+// (`clearance`, `gap`, `separator`, `indent`, `size`, `leading`).
 #let _fn-area(notes, entry: (:)) = {
   let opt(key, default) = entry.at(key, default: default)
   let clearance = opt("clearance", auto)
@@ -151,7 +151,13 @@
   let indent = opt("indent", auto)
   let size = opt("size", auto)
   let leading = opt("leading", auto)
-  let style = opt("style", none)
+  let style = opt("style", (:))
+  if size == auto and type(style) == dictionary {
+    size = style.at("size", default: auto)
+  }
+  if leading == auto and type(style) == dictionary {
+    leading = style.at("leading", default: auto)
+  }
   let out = []
   out += v(if clearance == auto { 1em } else { clearance })
   if separator == auto {
@@ -175,7 +181,10 @@
       below: 0pt,
       inset: 0pt,
       outset: 0pt,
-      if style == none { inner } else { style(inner) },
+      if type(style) == dictionary {
+        set text(..style)
+        inner
+      } else { style(inner) },
     )
   }
   out

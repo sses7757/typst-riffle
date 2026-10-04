@@ -29,106 +29,123 @@ the layout changes course.
 The package is available on Typst Universe:
 
 ```typ
-#import "@preview/riffle:0.1.0": column-flow, single-flow, asymmetric-flow
+#import "@preview/riffle:0.2.0": margin-reflow
 ```
 
 ## Quick start
 
 ```typ
-#import "@preview/riffle:0.1.0": column-flow
+#import "@preview/riffle:0.2.0": margin-reflow
 
 #set page(margin: (inside: 1.75cm, outside: 6.45cm))
 #set par(first-line-indent: (amount: 2em, all: true), justify: true)
 
 // ... text on the current asymmetric page ...
 
-#v(1em)
+#margin-reflow(
+  columns: (count: 2, gutter: 14pt),
+  margin: "symmetric",
+  footnote-style: (size: 9pt),
+)[
+  第一段内容。#footnote[第一条脚注。]
 
-#column-flow(
-  [
-    第一段内容。#footnote[第一条脚注。]
-
-    第二段内容。
-  ],
-  gutter: 14pt,
-  footnote-entry: (indent: 0em, size: 9pt),
-)
+  第二段内容。
+]
 ```
 
 The call reflows the content into two columns across the symmetric content
 width, right where it appears, and the following pages use symmetric margins.
 
-## Functions
+## `margin-reflow`
 
-| Function | Starting margins | Resulting layout |
-| --- | --- | --- |
-| `column-flow` | asymmetric | two columns across the symmetric width |
-| `single-flow` | asymmetric | one column across the symmetric width |
-| `asymmetric-flow` | symmetric | one column across a given asymmetric width |
+One function covers every direction:
 
-All three:
+```typ
+#margin-reflow(
+  content,
+  columns: (count: 1, gutter: 4%),
+  margin: auto,
+  footnote-style: none,
+  set-page-margin: true,
+)
+```
 
-- start at the current position and never insert a page break before the
+- `content` *(content)*: the content to reflow. Paragraph breaks are honored.
+- `columns` *(dictionary, default `(count: 1, gutter: 4%)`)*: forwarded to the
+  column layout. Only `count` *(int, default `1`)* and `gutter` *(length,
+  default `4%` of the reflow width)* are meaningful.
+- `margin` *(auto, length, dictionary, or `"symmetric"`, default `auto`)*: the
+  horizontal margin to switch to — a page-margin dictionary such as
+  `(inside: 1cm, outside: 3cm)`, a plain length for equal left/right margins,
+  `"symmetric"` for `min(inside, outside)` of the current page on both sides, or
+  `auto` to inherit the current margin. The top and bottom margins of the current
+  page are preserved.
+- `footnote-style` *(none, dictionary, or function)*: styling for the manually
+  laid-out footnote entries. `none` keeps the inherited defaults, a dictionary is
+  applied as `set text(...)` to the body of each entry (so it takes `text`'s
+  arguments such as `size` or `fill`), and a function is applied to the body
+  directly. The entry spacing (`gap`, `indent`, `clearance`, `separator`) comes
+  from the ambient `footnote.entry` settings.
+- `set-page-margin` *(bool, default `true`)*: `true` switches the margins of the
+  pages *after* the reflow with `set page(...)` and splits only the current page
+  by hand (fast, recommended, works with any `count`); `false` never uses
+  `set page(...)`, splits every page by hand and emulates the margin change with
+  padding (slower, but it leaves the document's page settings untouched). The
+  hand-split path requires `count: 1`: a hand-split page cannot switch to a
+  multi-column layout partway through, so any other `count` is rejected with an
+  assertion.
+
+The function:
+
+- starts at the current position and never inserts a page break before the
   reflowed content;
-- lay the reflowed content flush to the bottom of the available height;
-- pull footnotes out of the flow and render them at the bottom of the reflowed
+- lays the reflowed content flush to the bottom of the available height;
+- pulls footnotes out of the flow and renders them at the bottom of the reflowed
   block, preserving numbering and `ref`s;
-- switch the margins of the following pages to the new layout;
-- are `context` functions, so they measure the current page themselves.
+- switches the margins of the following pages to the new layout;
+- is a `context` function, so it measures the current page itself.
 
 Set `par.first-line-indent` if you want first-line indentation inside the
 reflowed content.
 
-### `column-flow`
+## Limitations
 
-```typ
-#column-flow(content, gutter: 4%, count: 2, footnote-entry: none)
-```
-
-- `content` *(content)*: the content to reflow. Paragraph breaks are honored.
-- `gutter` *(length, default `4%` of the reflow width)*: gap between columns.
-- `count` *(int, default `2`)*: number of columns.
-- `footnote-entry` *(none, dictionary, or function)*: styling for the manually
-  laid-out footnote entries. `none` uses Typst's defaults, a dictionary is used
-  as `footnote.entry` configuration (such as `indent`, `size`, `leading`,
-  `clearance`, `gap`, `separator`, `style`), and a function is shorthand for
-  `(style: function)`.
-
-### `single-flow`
-
-```typ
-#single-flow(content, footnote-entry: none)
-```
-
-- `content` *(content)*: the content to reflow.
-- `footnote-entry` *(none, dictionary, or function)*: as in `column-flow`.
-
-### `asymmetric-flow`
-
-```typ
-#asymmetric-flow(content, margin, footnote-entry: none)
-```
-
-- `content` *(content)*: the content to reflow.
-- `margin` *(auto, length, or dictionary)*: the asymmetric horizontal margin to
-  switch to, e.g. `(inside: 1cm, outside: 3cm)` or `(left: 1cm, right: 3cm)`.
-  `inside`/`outside` are resolved against the current page parity, like
-  `page.margin`. Only the horizontal margins are taken from `margin`; the top and
-  bottom margins of the current page are preserved.
-- `footnote-entry` *(none, dictionary, or function)*: as in `column-flow`.
+- **No nesting.** The function measures and rewrites its content, and reads the
+  page state at the position where it is called, so a `margin-reflow` call
+  *inside* the reflowed content cannot be handled: the inner call would measure a
+  page whose geometry the outer call has already replaced. Keep calls sequential.
+- **No state updates inside the content.** The content is laid out several times
+  while the package finds the amount that fits (once per page with
+  `set-page-margin: false`), so a `state` updated inside the reflowed content runs
+  more than once and cannot be relied upon. Keep the state handling outside and
+  pass the result in — or use a metadata-based mechanism. `counter` access that
+  Typst resolves after layout (including a manual `counter(...).update(...)` or
+  `.step()` written as document content) is *not* affected.
+- **Footnotes are rendered by the package.** Typst's `footnote.entry` rules do
+  not apply to footnotes inside a reflow; use the `footnote-style` parameter for
+  the entry body and `#set footnote.entry(...)` for the spacing.
+- **Page setup.** The page width and height must be concrete lengths.
+  `set-page-margin: false` requires `count: 1`. `margin: auto` inherits the
+  current margin, which on an asymmetric page means the columns span the
+  asymmetric width; pass `margin: "symmetric"` for a two-column reflow.
 
 ## Compatibility and CJK
 
 - **Content-processing packages** should be applied to the content *before* it is
-  passed in, because the functions split and rebuild content. For example, with
+  passed in, because the function splits and rebuilds content. For example, with
   `cjk-unbreak`:
 
   ```typ
   #import "@preview/cjk-unbreak:0.2.3": remove-cjk-break-space
 
-  #column-flow(remove-cjk-break-space[
-    中文与英文混排 content ...
-  ])
+  #margin-reflow(
+    columns: (count: 2, gutter: 10pt),
+    margin: "symmetric",
+  )[
+    #remove-cjk-break-space[
+      中文与英文混排 content ...
+    ]
+  ]
   ```
 
 - **CJK and mixed scripts** are supported: the splitter is aware of Han
@@ -141,19 +158,21 @@ reflowed content.
   #set par(first-line-indent: (amount: 2em, all: true), justify: true)
   ```
 
-- **Layout packages** have not been tested. The functions build their own
-  fixed-height `grid`/`block` structure and change `page.margin`, so packages
+  A line break in the *source* between two CJK characters renders as a space;
+  `cjk-unbreak` removes it when both sides are plain text, but not across a
+  styled element such as `strong` or a footnote.
+
+- **Layout packages** have not been tested. The function builds its own
+  fixed-height `grid`/`block` structure and changes `page.margin`, so packages
   that also control pagination, columns or page geometry may conflict. Packages
-  that only decorate content generally work. Footnote styling is rendered
-  manually, so use the `footnote-entry` parameter if a package restyles
-  `footnote.entry`.
+  that only decorate content generally work.
 
 - **Margin-note packages** (e.g. `marginalia`, a common combination): because the
-  flow functions manage the page and change `page.margin` mid-page, do *not* wrap
-  the output of a flow function in `marginalia.wideblock`, and do *not* use
+  reflow manages the page and changes `page.margin` mid-page, do *not* wrap its
+  output in `marginalia.wideblock`, and do *not* use
   `marginalia.wideblock`/`marginalia.header` for headers or footers. Instead,
   align the header/footer from `page.margin` so that they follow the margins the
-  flow sets (the manual shows a minimal example). An *empty*
+  reflow sets (the manual shows a minimal example). An *empty*
   `marginalia.wideblock` may still be used to keep margin notes from overflowing
   into the body text.
 
@@ -166,6 +185,22 @@ reflowed content.
 The examples in the manuals are rendered on small pages with boundary guide
 lines: the *blue* dashed line marks the symmetric content boundary and the
 *orange* dashed line the asymmetric one.
+
+## Development
+
+- Register a Git repository to update the package locally.
+  ```sh
+  git init
+  git remote add origin git@github.com:sses7757/typst-riffle.git
+  ```
+- Test the package.
+  ```sh
+  powershell -NoProfile -File tests\run.ps1
+  ```
+- Render the manual figures.
+  ```sh
+  powershell -NoProfile -File scripts\render-doc-images.ps1
+  ```
 
 ## License
 
