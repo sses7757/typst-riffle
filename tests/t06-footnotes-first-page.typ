@@ -11,6 +11,12 @@
 //   - the entries starting at the left symmetric boundary,
 //   - the reflowed body not overlapping the footnote area,
 //   - footnote marks 1..3 in the expected order.
+//
+// Note: the blank line after the last paragraph is load-bearing — with it the
+// first line of page 2 stays at the text margin, without it the same shape
+// renders that line one indent to the left. `t22-first-line-indent-leak` is the
+// same shape without the blank line and fails on purpose; see `tests/README.md`
+// for the measurements.
 
 #import "assets/harness.typ": *
 
@@ -34,6 +40,7 @@
   #lorem(200)
 
   #para-fn(200, [A footnote on a later page.])
+  
 ]
 
 // EXPECT page=1 pages=2 ink-left=10.05mm ink-right=9.70mm ink-top=17.64mm body-bottom=12.26mm cols=2
