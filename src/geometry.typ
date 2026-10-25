@@ -156,15 +156,29 @@
   }
 }
 
-// Largest prefix of `units` whose rendered height does not exceed `avail`,
-// found by binary search over the measured prefix heights.
+// Largest prefix of `units` whose rendered height does not exceed `avail`.
+//
+// The prefix height is monotonic in its length, so a binary search finds the
+// answer. However, measuring the whole remaining content first (`h(n)`) lays
+// out every following block just to discover that it does not fit on the
+// current page. For content with expensive, context-dependent blocks (large
+// figures, plots, ...) this costs a lot of time and memory. Grow the prefix
+// exponentially until it overflows instead, then binary-search only inside
+// that (one-page-sized) range.
 #let _cut-chunk(units, width, avail, cont) = {
   let n = units.len()
   if n == 0 { return 0 }
   let h(k) = measure(_chunk-content(units.slice(0, k), cont), width: width).height
-  if h(n) <= avail { return n }
-  let lo = 0
-  let hi = n
+
+  let hi = 1
+  let hi-height = h(hi)
+  while hi < n and hi-height <= avail {
+    hi = calc.min(n, hi * 2)
+    hi-height = h(hi)
+  }
+  if hi-height <= avail { return n }
+
+  let lo = calc.div-euclid(hi, 2)
   while lo + 1 < hi {
     let mid = calc.div-euclid(lo + hi, 2)
     if h(mid) <= avail { lo = mid } else { hi = mid }
