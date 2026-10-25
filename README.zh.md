@@ -16,13 +16,13 @@
 本包已发布在 Typst Universe：
 
 ```typ
-#import "@preview/riffle:0.2.0": margin-reflow
+#import "@preview/riffle:0.2.1": margin-reflow
 ```
 
 ## 快速开始
 
 ```typ
-#import "@preview/riffle:0.2.0": margin-reflow
+#import "@preview/riffle:0.2.1": margin-reflow
 
 #set page(margin: (inside: 1.75cm, outside: 6.45cm))
 #set par(first-line-indent: (amount: 2em, all: true), justify: true)

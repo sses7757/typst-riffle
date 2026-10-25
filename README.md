@@ -29,13 +29,13 @@ the layout changes course.
 The package is available on Typst Universe:
 
 ```typ
-#import "@preview/riffle:0.2.0": margin-reflow
+#import "@preview/riffle:0.2.1": margin-reflow
 ```
 
 ## Quick start
 
 ```typ
-#import "@preview/riffle:0.2.0": margin-reflow
+#import "@preview/riffle:0.2.1": margin-reflow
 
 #set page(margin: (inside: 1.75cm, outside: 6.45cm))
 #set par(first-line-indent: (amount: 2em, all: true), justify: true)

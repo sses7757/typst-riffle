@@ -28,7 +28,7 @@
 ///
 /// == Example
 /// ```typ
-/// #import "@preview/riffle:0.2.0": margin-reflow
+/// #import "@preview/riffle:0.2.1": margin-reflow
 ///
 /// #lorem(60) // occupies the top of the current asymmetric page
 ///

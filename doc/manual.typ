@@ -38,7 +38,7 @@
   #v(0.3em)
   #text(size: 14pt)[Reflow content into new margins in the middle of a page] \
   #v(0.3em)
-  #text(size: 11pt)[Manual · version 0.2.0]
+  #text(size: 11pt)[Manual · version 0.2.1]
 ]
 
 #v(2em)
@@ -81,7 +81,7 @@ geometry and position itself.
 The package is available on Typst Universe:
 
 ```typ
-#import "@preview/riffle:0.2.0": margin-reflow
+#import "@preview/riffle:0.2.1": margin-reflow
 ```
 
 = Requirements

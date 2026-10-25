@@ -42,7 +42,7 @@
   #v(0.3em)
   #text(size: 14pt)[在页面中途把内容重排到新的页边距] \
   #v(0.3em)
-  #text(size: 11pt)[手册 · 版本 0.2.0]
+  #text(size: 11pt)[手册 · 版本 0.2.1]
 ]
 
 #v(2em)
@@ -75,7 +75,7 @@
 本包已发布在 Typst Universe：
 
 ```typ
-#import "@preview/riffle:0.2.0": margin-reflow
+#import "@preview/riffle:0.2.1": margin-reflow
 ```
 
 = 使用要求
